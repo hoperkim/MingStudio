@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+*.log
+
+# Models & Large Data (Keep local)
+data/models/*
+!data/models/.gitkeep
+data/outputs/*
+!data/outputs/.gitkeep
+data/voices/*.wav
+data/voices/*.mp3
+
+# Rust
+launcher/target/
+
+# OS
+Thumbs.db
+.DS_Store
