@@ -1,14 +1,14 @@
 # 🎙️ MingStudio — Universal AI Voice Workstation
 
 <div align="center">
-  <h3>오픈소스 최강 차세대 AI 음성 합성 & 더빙 워크스테이션</h3>
-  <p><strong>Powered by inclusionAI Ming-3.0-tts-tiny (7.9B MoE) · 100% Local & Private</strong></p>
+  <p><strong>Next-Gen Open-Source AI Voice Workstation powered by Ming-3.0 MoE (7.9B) — Zero-Shot Voice Cloning, Prompt Voice Design, 14 Paralinguistic Emotion Tags, Multi-Speaker Studio & Video Dubbing in Korean, Chinese, English & Japanese.</strong></p>
+  <p><em>100% Local · Zero-Pollution Portable · High-Performance CUDA Acceleration</em></p>
   <p>
-    <a href="#features">기능 소개</a> ·
-    <a href="#languages">다국어 지원</a> ·
-    <a href="#quick-start">빠른 시작</a> ·
-    <a href="#architecture">아키텍처</a> ·
-    <a href="#license">라이선스</a>
+    <a href="#features">Key Features</a> ·
+    <a href="#languages">Languages</a> ·
+    <a href="#quick-start">Quick Start</a> ·
+    <a href="#architecture">Architecture</a> ·
+    <a href="#license">License</a>
   </p>
 </div>
 
