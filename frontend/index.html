@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MingStudio - Ming-3.0 MoE AI Voice Workstation</title>
+  
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+  
+  <!-- Custom Styling -->
+  <link rel="stylesheet" href="/static/style.css">
+  
+  <!-- Tailwind Configuration -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfeff',
+              400: '#22d3ee',
+              500: '#06b6d4',
+              600: '#0891b2',
+              900: '#164e63',
+            },
+            dark: {
+              base: '#0B0F19',
+              card: '#111827',
+              surface: '#1F2937',
+              border: '#374151',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#0B0F19] text-gray-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-gray-800/80 bg-gray-900/60 backdrop-blur-xl sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between shadow-2xl">
+    <div class="flex items-center gap-3.5">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 via-teal-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 ring-1 ring-white/20">
+        <i data-lucide="mic" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-gray-200 to-cyan-300 bg-clip-text text-transparent">
+            MingStudio
+          </h1>
+          <span class="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-400 border border-cyan-800/60">
+            Ming-3.0 MoE
+          </span>
+        </div>
+        <p class="text-xs text-gray-400">Next-Gen Multilingual Voice Workstation</p>
+      </div>
+    </div>
+
+    <!-- Hardware & Model Telemetry Badges -->
+    <div class="flex items-center gap-3">
+      <!-- GPU Telemetry -->
+      <div id="gpuBadge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800/70 border border-gray-700/60 text-xs text-gray-300">
+        <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i>
+        <span id="gpuText">GPU 로딩 중...</span>
+      </div>
+
+      <!-- Model Status Badge -->
+      <div id="modelStatusBadge" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-yellow-950/40 border border-yellow-700/50 text-xs text-yellow-300">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+        </span>
+        <span id="modelStatusText">모델 상태 확인 중...</span>
+      </div>
+
+      <!-- Settings / Model Manager Button -->
+      <button id="btnOpenModelModal" class="p-2 rounded-lg bg-gray-800/80 hover:bg-gray-700 border border-gray-700 text-gray-300 hover:text-white transition" title="모델 다운로드 및 상태 관리">
+        <i data-lucide="database" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workstation View -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Console: Controls & Voice Design (5 Cols) -->
+    <aside class="lg:col-span-5 flex flex-col gap-5">
+      
+      <!-- Language Selection (7 Languages) -->
+      <section class="bg-gray-900/80 border border-gray-800/80 rounded-2xl p-4 sm:p-5 shadow-xl backdrop-blur-md">
+        <div class="flex items-center justify-between mb-3.5">
+          <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="globe" class="w-3.5 h-3.5 text-cyan-400"></i>
+            지원 언어 (7개국어)
+          </label>
+          <span id="currentLangLabel" class="text-xs text-cyan-400 font-medium">한국어 (ko)</span>
+        </div>
+        <div class="grid grid-cols-4 sm:grid-cols-7 gap-2" id="languageContainer">
+          <!-- Dynamically filled with 7 language chips -->
+        </div>
+      </section>
+
+      <!-- Voice Mode Switcher: Zero-Shot Clone vs Prompt Voice Design -->
+      <section class="bg-gray-900/80 border border-gray-800/80 rounded-2xl p-4 sm:p-5 shadow-xl backdrop-blur-md">
+        <div class="flex items-center p-1 bg-gray-950/70 rounded-xl border border-gray-800 mb-4">
+          <button id="tabVoiceDesign" class="flex-1 py-2 text-xs font-semibold rounded-lg text-white bg-cyan-600/90 shadow transition flex items-center justify-center gap-1.5">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            프롬프트 음성 디자인
+          </button>
+          <button id="tabVoiceClone" class="flex-1 py-2 text-xs font-semibold rounded-lg text-gray-400 hover:text-gray-200 transition flex items-center justify-center gap-1.5">
+            <i data-lucide="audio-lines" class="w-3.5 h-3.5"></i>
+            Zero-Shot 음성 복제
+          </button>
+        </div>
+
+        <!-- Mode 1: Voice Design Pane -->
+        <div id="paneVoiceDesign" class="space-y-3">
+          <label class="text-xs font-medium text-gray-300 flex items-center justify-between">
+            <span>음성 스타일 및 화자 묘사 프롬프트</span>
+            <span class="text-[11px] text-gray-500">자연어 디자인</span>
+          </label>
+          <textarea id="voiceDesignPrompt" rows="3" placeholder="예: 신뢰감 넘치는 30대 여성 아나운서의 맑고 명료한 목소리, 부드럽고 차분한 톤" class="w-full bg-gray-950/90 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-cyan-500 transition resize-none"></textarea>
+          
+          <!-- Quick Preset Chips -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button class="preset-chip text-[11px] px-2.5 py-1 rounded-md bg-gray-800/80 hover:bg-gray-700 text-gray-300 border border-gray-700/60 transition" data-prompt="차분하고 신뢰감 있는 30대 여성 아나운서">
+              🎙️ 여성 아나운서
+            </button>
+            <button class="preset-chip text-[11px] px-2.5 py-1 rounded-md bg-gray-800/80 hover:bg-gray-700 text-gray-300 border border-gray-700/60 transition" data-prompt="중후하고 깊은 울림을 가진 40대 남성 다큐멘터리 내레이터">
+              🎬 남성 내레이터
+            </button>
+            <button class="preset-chip text-[11px] px-2.5 py-1 rounded-md bg-gray-800/80 hover:bg-gray-700 text-gray-300 border border-gray-700/60 transition" data-prompt="밝고 다정한 20대 여성 AI 오디오북 낭독자">
+              📖 밝은 오디오북
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode 2: Zero-Shot Clone Pane -->
+        <div id="paneVoiceClone" class="hidden space-y-3">
+          <label class="text-xs font-medium text-gray-300 flex items-center justify-between">
+            <span>참조 음성 오디오 업로드 (5~15초 권장)</span>
+            <span class="text-[11px] text-cyan-400" id="cloneUploadStatus">준비됨</span>
+          </label>
+          
+          <div id="dropZone" class="border-2 border-dashed border-gray-700 hover:border-cyan-500/80 rounded-xl p-5 text-center cursor-pointer bg-gray-950/50 hover:bg-cyan-950/10 transition group">
+            <input type="file" id="referenceFileInput" class="hidden" accept=".wav,.mp3,.m4a,.ogg,.flac">
+            <div class="flex flex-col items-center gap-2">
+              <i data-lucide="upload-cloud" class="w-8 h-8 text-gray-500 group-hover:text-cyan-400 transition"></i>
+              <p class="text-xs font-medium text-gray-300">오디오 파일을 여기로 끌어다 놓거나 클릭</p>
+              <p class="text-[11px] text-gray-500">WAV, MP3, FLAC, M4A 지원</p>
+            </div>
+          </div>
+
+          <div id="referencePreview" class="hidden p-3 rounded-xl bg-gray-950/80 border border-gray-800 flex items-center justify-between">
+            <div class="flex items-center gap-2.5 overflow-hidden">
+              <i data-lucide="music" class="w-4 h-4 text-cyan-400 shrink-0"></i>
+              <span id="refFileName" class="text-xs text-gray-300 truncate">sample.wav</span>
+            </div>
+            <button id="btnRemoveRef" class="text-gray-500 hover:text-red-400 p-1">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Acoustic Tuning Sliders -->
+      <section class="bg-gray-900/80 border border-gray-800/80 rounded-2xl p-4 sm:p-5 shadow-xl backdrop-blur-md space-y-4">
+        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+          <i data-lucide="sliders" class="w-3.5 h-3.5 text-cyan-400"></i>
+          음향 튜닝 및 감정 표현
+        </label>
+
+        <!-- Emotion Selector -->
+        <div>
+          <div class="flex justify-between text-xs text-gray-300 mb-1.5">
+            <span>감정 톤 (Emotion)</span>
+          </div>
+          <select id="emotionSelect" class="w-full bg-gray-950/90 border border-gray-800 rounded-xl px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-cyan-500">
+            <option value="neutral">기본 자연스러움 (Neutral)</option>
+            <option value="happy">밝고 기쁜 톤 (Happy)</option>
+            <option value="sad">슬프고 차분한 톤 (Sad)</option>
+            <option value="angry">격앙되고 힘찬 톤 (Angry)</option>
+            <option value="whisper">속삭이듯 부드러운 톤 (Whisper)</option>
+            <option value="calm">차분하고 편안한 톤 (Calm)</option>
+            <option value="dramatic">드라마틱하고 긴장된 톤 (Dramatic)</option>
+          </select>
+        </div>
+
+        <!-- Speed Slider -->
+        <div>
+          <div class="flex justify-between text-xs text-gray-300 mb-1.5">
+            <span>발화 속도 (Speed)</span>
+            <span id="speedVal" class="text-cyan-400 font-mono font-medium">1.00x</span>
+          </div>
+          <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.05" value="1.0" class="w-full accent-cyan-500 h-1.5 bg-gray-800 rounded-lg cursor-pointer">
+        </div>
+
+        <!-- Pitch Slider -->
+        <div>
+          <div class="flex justify-between text-xs text-gray-300 mb-1.5">
+            <span>음조 조절 (Pitch)</span>
+            <span id="pitchVal" class="text-cyan-400 font-mono font-medium">0 st</span>
+          </div>
+          <input type="range" id="pitchSlider" min="-12" max="12" step="1" value="0" class="w-full accent-cyan-500 h-1.5 bg-gray-800 rounded-lg cursor-pointer">
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- Right Workstation: Text Editor, 14 Paralinguistic Tags & Master Player (7 Cols) -->
+    <div class="lg:col-span-7 flex flex-col gap-5">
+      
+      <!-- Script & Text Editor Section -->
+      <section class="bg-gray-900/80 border border-gray-800/80 rounded-2xl p-4 sm:p-5 shadow-xl backdrop-blur-md flex flex-col flex-1">
+        
+        <!-- 14 Paralinguistic Emotion Tags Toolbar -->
+        <div class="mb-3.5">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="tag" class="w-3.5 h-3.5 text-cyan-400"></i>
+              14종 파링귀스틱 감정 태그 (원클릭 삽입)
+            </span>
+            <span class="text-[11px] text-gray-500">커서 위치에 즉시 삽입</span>
+          </div>
+
+          <!-- Tag Chips Grid -->
+          <div class="flex flex-wrap gap-1.5" id="tagsToolbar">
+            <!-- Dynamically populated 14 emotion tags -->
+          </div>
+        </div>
+
+        <!-- Main Text Input -->
+        <div class="relative flex-1 flex flex-col min-h-[220px]">
+          <textarea id="ttsTextInput" class="w-full flex-1 bg-gray-950/90 border border-gray-800 rounded-xl p-4 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-cyan-500 transition resize-none leading-relaxed font-sans" placeholder="합성할 텍스트를 입력하세요. 상단의 파링귀스틱 감정 태그 [laugh], [sigh] 등을 클릭하여 원하는 위치에 감정을 배치할 수 있습니다."></textarea>
+          
+          <div class="flex items-center justify-between text-[11px] text-gray-500 px-2 py-1.5 border-t border-gray-800/60 bg-gray-950/40 rounded-b-xl">
+            <span id="charCount">0 글자</span>
+            <span>단축키: <kbd class="px-1.5 py-0.5 rounded bg-gray-800 text-gray-300 font-mono text-[10px]">Ctrl + Enter</kbd></span>
+          </div>
+        </div>
+
+        <!-- Render Action Button -->
+        <div class="mt-4">
+          <button id="btnGenerate" class="w-full py-3.5 px-6 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-cyan-600 via-teal-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 shadow-lg shadow-cyan-600/25 active:scale-[0.99] transition flex items-center justify-center gap-2">
+            <i data-lucide="zap" class="w-4 h-4"></i>
+            <span id="btnGenerateText">음성 합성 렌더링 (Render Voice)</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Master Audio Waveform Player -->
+      <section class="bg-gray-900/80 border border-gray-800/80 rounded-2xl p-4 sm:p-5 shadow-xl backdrop-blur-md">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400"></div>
+            <h3 class="text-xs font-semibold text-gray-300 uppercase tracking-wider">마스터 오디오 파형 (Wavesurfer)</h3>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono text-gray-400">
+            <span id="audioCurrentTime">00:00.0</span>
+            <span>/</span>
+            <span id="audioDuration">00:00.0</span>
+          </div>
+        </div>
+
+        <!-- Waveform Canvas Container -->
+        <div id="waveform" class="w-full h-24 bg-gray-950/90 rounded-xl border border-gray-800/80 p-2 cursor-pointer flex items-center justify-center">
+          <span id="waveformPlaceholder" class="text-xs text-gray-600">음성 합성 후 고해상도 오디오 파형이 렌더링됩니다.</span>
+        </div>
+
+        <!-- Player Controls -->
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-800/60">
+          <div class="flex items-center gap-2">
+            <button id="btnPlayPause" disabled class="w-10 h-10 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-800 disabled:text-gray-600 text-white flex items-center justify-center shadow-md transition">
+              <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+            </button>
+            <button id="btnStop" disabled class="p-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 disabled:text-gray-600 text-gray-300 transition">
+              <i data-lucide="square" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Playback Speed Controls -->
+          <div class="flex items-center gap-1 bg-gray-950/70 p-1 rounded-lg border border-gray-800 text-xs text-gray-400">
+            <button class="speed-btn px-2 py-1 rounded hover:bg-gray-800" data-playback-rate="0.8">0.8x</button>
+            <button class="speed-btn px-2 py-1 rounded bg-cyan-900/50 text-cyan-400 font-bold" data-playback-rate="1.0">1.0x</button>
+            <button class="speed-btn px-2 py-1 rounded hover:bg-gray-800" data-playback-rate="1.25">1.25x</button>
+            <button class="speed-btn px-2 py-1 rounded hover:bg-gray-800" data-playback-rate="1.5">1.5x</button>
+          </div>
+
+          <!-- Direct WAV Download -->
+          <a id="btnDownloadWav" href="#" download class="opacity-50 pointer-events-none px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-xs font-semibold text-gray-200 transition flex items-center gap-1.5">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            WAV 다운로드
+          </a>
+        </div>
+      </section>
+
+      <!-- Generation History Feed -->
+      <section class="bg-gray-900/80 border border-gray-800/80 rounded-2xl p-4 sm:p-5 shadow-xl backdrop-blur-md">
+        <div class="flex items-center justify-between mb-3">
+          <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="history" class="w-3.5 h-3.5 text-cyan-400"></i>
+            합성 히스토리
+          </label>
+          <span id="historyCount" class="text-xs text-gray-500">0개 생성됨</span>
+        </div>
+        <div id="historyList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+          <p class="text-xs text-gray-600 text-center py-4">아직 생성된 음성이 없습니다.</p>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Model Downloader Wizard Modal -->
+  <div id="modalModelWizard" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="bg-gray-900 border border-gray-700 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+      
+      <!-- Top Glow Accent -->
+      <div class="absolute -top-24 -left-24 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Close Button -->
+      <button id="btnCloseModal" class="absolute top-5 right-5 text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Modal Header -->
+      <div class="flex items-center gap-4 mb-5">
+        <div class="w-12 h-12 rounded-2xl bg-cyan-600/30 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+          <i data-lucide="package-check" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            Ming-3.0-tts-tiny 모델 상태
+          </h2>
+          <p class="text-xs text-gray-400">Ant Group Ling V3 MoE 7.9B (1.3B Active) 인앱 다운로더</p>
+        </div>
+      </div>
+
+      <!-- Shard Checklist -->
+      <div class="bg-gray-950/80 rounded-2xl p-4 border border-gray-800/80 mb-5 space-y-2 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-400">분할 가중치 (Safetensors)</span>
+          <span id="modalShardStatus" class="font-mono text-cyan-400 font-semibold">0 / 30 완료</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-400">저장 경로</span>
+          <span class="text-gray-300 truncate max-w-[280px]" title="data/models/Ming-3.0-tts-tiny/">data/models/Ming-3.0-tts-tiny/</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-gray-400">총 다운로드 용량</span>
+          <span class="text-gray-300 font-mono">약 16.76 GiB (공식 Hugging Face CDN)</span>
+        </div>
+      </div>
+
+      <!-- Live Download Telemetry Box -->
+      <div id="downloadTelemetryBox" class="space-y-3 mb-6">
+        <div class="flex items-center justify-between text-xs">
+          <span id="telemetryStatus" class="text-gray-300 font-medium">대기 중</span>
+          <span id="telemetryPercent" class="font-mono font-bold text-cyan-400 text-sm">0.0%</span>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full h-3 bg-gray-950 rounded-full overflow-hidden border border-gray-800 p-0.5">
+          <div id="modalProgressBar" class="h-full bg-gradient-to-r from-cyan-500 via-teal-400 to-indigo-500 rounded-full transition-all duration-300 w-0"></div>
+        </div>
+
+        <!-- Detailed Metrics Grid -->
+        <div class="grid grid-cols-3 gap-2 text-center pt-1">
+          <div class="bg-gray-950/60 p-2 rounded-xl border border-gray-800/60">
+            <p class="text-[10px] text-gray-500">전송 속도</p>
+            <p id="telemetrySpeed" class="text-xs font-mono font-semibold text-gray-200 mt-0.5">0.0 MB/s</p>
+          </div>
+          <div class="bg-gray-950/60 p-2 rounded-xl border border-gray-800/60">
+            <p class="text-[10px] text-gray-500">남은 시간</p>
+            <p id="telemetryEta" class="text-xs font-mono font-semibold text-gray-200 mt-0.5">--</p>
+          </div>
+          <div class="bg-gray-950/60 p-2 rounded-xl border border-gray-800/60">
+            <p class="text-[10px] text-gray-500">받은 용량</p>
+            <p id="telemetryBytes" class="text-xs font-mono font-semibold text-gray-200 mt-0.5">0 MB</p>
+          </div>
+        </div>
+
+        <p id="telemetryActiveFile" class="text-[11px] text-gray-500 truncate text-center"></p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3">
+        <button id="btnStartDownload" class="flex-1 py-3 px-5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 shadow-lg shadow-cyan-600/30 transition flex items-center justify-center gap-2">
+          <i data-lucide="download-cloud" class="w-4 h-4"></i>
+          <span id="btnStartDownloadText">원클릭 모델 다운로드 시작</span>
+        </button>
+        <button id="btnCancelDownload" class="hidden py-3 px-5 rounded-xl font-bold text-sm text-red-400 hover:text-white bg-gray-800 hover:bg-red-600/80 border border-gray-700 transition">
+          취소
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/app.js"></script>
+</body>
+</html>

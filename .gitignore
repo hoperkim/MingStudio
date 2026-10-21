@@ -1,0 +1,44 @@
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+.pytest_cache/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE & Editor settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs & Temporary files
+*.log
+*.tmp
+*.temp
+*.part
+*.crdownload
+
+# Data & Models (Preserve folders with .gitkeep)
+data/models/*
+!data/models/.gitkeep
+data/outputs/*
+!data/outputs/.gitkeep
+data/references/*
+!data/references/.gitkeep
+
+# Exclude any local checkpoint archives
+*.safetensors
+*.ckpt
+*.pt
+*.bin
