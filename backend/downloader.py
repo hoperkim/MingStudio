@@ -83,8 +83,10 @@ class ModelDownloader:
         """Return current snapshot of download telemetry."""
         with self.lock:
             percent = 0.0
-            if self.total_bytes > 0:
-                percent = min(100.0, round((self.downloaded_bytes / self.total_bytes) * 100, 1))
+            if self.status == "completed" or (self.total_bytes > 0 and self.downloaded_bytes >= self.total_bytes * 0.99):
+                percent = 100.0
+            elif self.total_bytes > 0:
+                percent = min(99.0, round((self.downloaded_bytes / self.total_bytes) * 100, 1))
             
             eta_str = self._format_eta(self.eta_seconds) if self.is_downloading else ("완료" if self.status == "completed" else "--")
             

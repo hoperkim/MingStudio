@@ -90,7 +90,10 @@ def check_model_status() -> Dict[str, Any]:
             total_bytes += cfg_path.stat().st_size
 
     ready = (len(present_shards) == TOTAL_SHARDS)
-    progress_percent = min(100.0, round((total_bytes / TOTAL_EXPECTED_BYTES) * 100, 1))
+    if ready:
+        progress_percent = 100.0
+    else:
+        progress_percent = min(99.0, round((total_bytes / TOTAL_EXPECTED_BYTES) * 100, 1))
 
     return {
         "ready": ready,

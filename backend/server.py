@@ -110,6 +110,18 @@ async def serve_index():
     return HTMLResponse(content=index_file.read_text(encoding="utf-8"))
 
 
+@app.post("/api/shutdown")
+async def shutdown_studio():
+    """Safely terminate the MingStudio server process."""
+    def delayed_exit():
+        time.sleep(0.6)
+        print("[MingStudio] Shutdown requested by user. Exiting safely.")
+        os._exit(0)
+
+    threading.Thread(target=delayed_exit, daemon=True).start()
+    return {"status": "shutting_down", "message": "MingStudio is shutting down"}
+
+
 @app.get("/api/health")
 async def health_check():
     """Health check used by launcher to confirm server readiness."""

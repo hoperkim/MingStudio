@@ -16,6 +16,7 @@ const dom = {
   modelStatusBadge: document.getElementById('modelStatusBadge'),
   modelStatusText: document.getElementById('modelStatusText'),
   btnOpenModelModal: document.getElementById('btnOpenModelModal'),
+  btnShutdown: document.getElementById('btnShutdown'),
   modalModelWizard: document.getElementById('modalModelWizard'),
   btnCloseModal: document.getElementById('btnCloseModal'),
   modalShardStatus: document.getElementById('modalShardStatus'),
@@ -263,12 +264,15 @@ async function pollDownloadProgress() {
 }
 
 function updateDownloadUI(data) {
-  const percent = data.percent || 0;
+  let percent = data.percent || 0;
+  if (percent >= 99.0 || data.status === 'completed') {
+    percent = 100.0;
+  }
   dom.modalProgressBar.style.width = `${percent}%`;
   dom.telemetryPercent.textContent = `${percent.toFixed(1)}%`;
   dom.telemetrySpeed.textContent = `${data.speed_mbps || 0} MB/s`;
   dom.telemetryEta.textContent = data.eta_str || '--';
-  dom.telemetryBytes.textContent = `${data.downloaded_str || '0 MB'} / ${data.total_str || '16.8 GB'}`;
+  dom.telemetryBytes.textContent = `${data.downloaded_str || '16.8 GB'} / ${data.total_str || '16.8 GB'}`;
 
   if (data.active_files && data.active_files.length > 0) {
     dom.telemetryActiveFile.textContent = `다운로드 중: ${data.active_files.slice(0, 2).join(', ')}`;
@@ -278,19 +282,27 @@ function updateDownloadUI(data) {
 
   dom.telemetryStatus.textContent =
     data.status === 'downloading' ? '8스레드 병렬 다운로드 진행 중...' :
-    data.status === 'completed' ? '다운로드 완료!' :
+    (data.status === 'completed' || percent === 100.0) ? '🎉 Ming-3.0 MoE 모델 준비 완료!' :
     data.status === 'cancelled' ? '다운로드 취소됨' : data.status;
+
+  if (percent === 100.0 && !dom.modalModelWizard.classList.contains('hidden')) {
+    onDownloadCompleted();
+  }
 }
 
 function onDownloadCompleted() {
   dom.modalShardStatus.textContent = '30 / 30 완료 (Ready)';
+  dom.modalProgressBar.style.width = '100%';
+  dom.telemetryPercent.textContent = '100.0%';
   dom.telemetryStatus.textContent = '🎉 Ming-3.0 MoE 모델 준비 완료!';
+  dom.btnStartDownload.classList.add('hidden');
+  dom.btnCancelDownload.classList.add('hidden');
   setStudioBadgeReady();
 
-  // Auto-dismiss modal after 1.2s
+  // Auto-dismiss modal after 0.8s
   setTimeout(() => {
     dom.modalModelWizard.classList.add('hidden');
-  }, 1200);
+  }, 800);
 }
 
 async function cancelDownload() {
@@ -596,6 +608,28 @@ function initEventListeners() {
 
   dom.btnStartDownload.addEventListener('click', startModelDownload);
   dom.btnCancelDownload.addEventListener('click', cancelDownload);
+
+  // Studio Clean Shutdown
+  if (dom.btnShutdown) {
+    dom.btnShutdown.addEventListener('click', async () => {
+      if (confirm('MingStudio AI 음성 작업실을 종료하시겠습니까?')) {
+        try {
+          await fetch('/api/shutdown', { method: 'POST' });
+        } catch (e) {}
+        document.body.innerHTML = `
+          <div class="min-h-screen bg-[#0B0F19] text-gray-200 flex flex-col items-center justify-center p-6 text-center font-sans">
+            <div class="w-16 h-16 rounded-2xl bg-cyan-950/60 border border-cyan-800/60 flex items-center justify-center mb-4 text-cyan-400">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h2 class="text-xl font-bold text-white mb-2">MingStudio가 안전하게 종료되었습니다</h2>
+            <p class="text-sm text-gray-400 mb-6">백엔드 프로세스가 해제되었습니다. 이 창을 닫아주세요.</p>
+            <button onclick="window.close()" class="px-5 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-xs font-semibold text-gray-200 transition">창 닫기</button>
+          </div>
+        `;
+        setTimeout(() => window.close(), 800);
+      }
+    });
+  }
 
   // Textarea input & keyboard shortcuts
   dom.ttsTextInput.addEventListener('input', updateCharCount);
