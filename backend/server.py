@@ -199,7 +199,7 @@ async def cancel_model_download():
 
 
 @app.post("/api/tts/generate")
-async def generate_speech(req: TTSGenerateRequest):
+def generate_speech(req: TTSGenerateRequest):
     """Render speech audio with emotion, pitch, speed, and paralinguistic markers."""
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="텍스트가 비어있습니다.")

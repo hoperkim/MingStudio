@@ -157,11 +157,12 @@ class VoiceEngine:
                         prompt_wav = wav_data
                         prompt_text = voice_design_prompt.strip() or "reference speaker"
 
-                # Calculate decode steps based on character length
+                # Calculate decode steps based on character length (12.5 steps/sec speech)
                 char_len = max(5, len(text))
-                max_steps = min(800, max(80, int(char_len * 5 / max(0.5, speed))))
-                flow_steps = 10
+                max_steps = min(300, max(35, int(char_len * 2.5 / max(0.5, speed))))
+                flow_steps = 4  # 4 Euler steps for optimal speed & high fidelity
 
+                print(f"[VoiceEngine] Starting MoE generate (max_steps={max_steps}, flow_steps={flow_steps})...")
                 output = self.model.generate_speech(
                     tokenizer=self.tokenizer,
                     target_text=text,
@@ -169,7 +170,9 @@ class VoiceEngine:
                     prompt_waveform=prompt_wav,
                     prompt_text=prompt_text,
                     flow_steps=flow_steps,
-                    max_decode_steps=max_steps
+                    max_decode_steps=max_steps,
+                    stop_threshold=0.35,
+                    log_every_n_steps=5
                 )
 
                 waveform_np = output.waveform.squeeze().float().cpu().numpy()

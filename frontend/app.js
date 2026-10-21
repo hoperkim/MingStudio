@@ -415,10 +415,15 @@ async function generateSpeech() {
     return;
   }
 
-  // Loading UI state
+  // Loading UI state with live elapsed timer
   dom.btnGenerate.disabled = true;
   dom.btnGenerate.classList.add('opacity-70');
-  dom.btnGenerateText.textContent = '⚡ 음성 합성 렌더링 중...';
+  let elapsedSec = 0;
+  dom.btnGenerateText.textContent = '⚡ Ming-3.0 AI 음성 렌더링 중... (0초)';
+  const renderTimer = setInterval(() => {
+    elapsedSec++;
+    dom.btnGenerateText.textContent = `⚡ Ming-3.0 AI 음성 렌더링 중... (${elapsedSec}초)`;
+  }, 1000);
 
   const payload = {
     text: text,
@@ -462,6 +467,7 @@ async function generateSpeech() {
   } catch (err) {
     alert('음성 렌더링 오류: ' + err.message);
   } finally {
+    clearInterval(renderTimer);
     dom.btnGenerate.disabled = false;
     dom.btnGenerate.classList.remove('opacity-70');
     dom.btnGenerateText.textContent = '음성 합성 렌더링 (Render Voice)';
