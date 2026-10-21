@@ -273,8 +273,11 @@
         </div>
 
         <!-- Waveform Canvas Container -->
-        <div id="waveform" class="w-full h-24 bg-gray-950/90 rounded-xl border border-gray-800/80 p-2 cursor-pointer flex items-center justify-center">
-          <span id="waveformPlaceholder" class="text-xs text-gray-600">음성 합성 후 고해상도 오디오 파형이 렌더링됩니다.</span>
+        <div class="relative w-full h-28 bg-gray-950/90 rounded-xl border border-gray-800/80 p-3 overflow-hidden cursor-pointer">
+          <div id="waveform" class="w-full h-full block"></div>
+          <div id="waveformPlaceholder" class="absolute inset-0 flex items-center justify-center pointer-events-none text-xs text-gray-500">
+            음성 합성 후 고해상도 오디오 파형이 렌더링됩니다.
+          </div>
         </div>
 
         <!-- Player Controls -->

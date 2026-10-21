@@ -36,6 +36,9 @@ data/outputs/*
 !data/outputs/.gitkeep
 data/references/*
 !data/references/.gitkeep
+data/.triton_cache/
+.triton/
+backend/official_ref/
 
 # Exclude any local checkpoint archives
 *.safetensors

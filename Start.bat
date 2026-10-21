@@ -4,6 +4,12 @@ cd /d "%~dp0" 2>nul
 
 set PYTHONIOENCODING=utf-8
 set PYTHONUTF8=1
+set "TRITON_CACHE_DIR=%~dp0data\.triton_cache"
+set "BAILING_KDA_FUSED_RECURRENT=0"
+set "BAILING_MLA_ATTN=sdpa"
+set "MING_TINY_AUDIO_VAE_ATTN=sdpa"
+set "FLA_USE_CUDA_KDA_FWD=0"
+set "FLA_USE_CUDA_KDA_BWD=0"
 
 echo =======================================================================
 echo   MingStudio - AI Voice Workstation Launcher

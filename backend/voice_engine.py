@@ -5,6 +5,22 @@ Integrates Ming-3.0 MoE neural pipeline with zero-shot cloning, voice design,
 
 import os
 import sys
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+BACKEND_DIR = Path(__file__).resolve().parent
+for p in [str(ROOT_DIR), str(BACKEND_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+# Configure release environment before any torch / fla imports
+os.environ["TRITON_CACHE_DIR"] = str(ROOT_DIR / "data" / ".triton_cache")
+os.environ["BAILING_KDA_FUSED_RECURRENT"] = "0"
+os.environ["BAILING_MLA_ATTN"] = "sdpa"
+os.environ["MING_TINY_AUDIO_VAE_ATTN"] = "sdpa"
+os.environ["FLA_USE_CUDA_KDA_FWD"] = "0"
+os.environ["FLA_USE_CUDA_KDA_BWD"] = "0"
+
 import time
 import math
 import wave
@@ -12,16 +28,10 @@ import struct
 import json
 import uuid
 import re
-from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
 import numpy as np
 import scipy.io.wavfile as wav_io
-
-ROOT_DIR = Path(__file__).resolve().parent.parent
-BACKEND_DIR = Path(__file__).resolve().parent
-for p in [str(ROOT_DIR), str(BACKEND_DIR)]:
-    if p not in sys.path:
-        sys.path.insert(0, p)
+import scipy.signal as signal
 
 try:
     from backend.config import (
@@ -41,6 +51,27 @@ except ImportError:
         SUPPORTED_LANGUAGES
     )
     from model_manager import check_model_status
+
+
+LANGUAGE_NAME_MAP = {
+    "ko": "Korean",
+    "zh": "Chinese",
+    "en": "English",
+    "ja": "Japanese",
+    "es": "Spanish",
+    "fr": "French",
+    "de": "German"
+}
+
+EMOTION_MAP = {
+    "neutral": "中性",
+    "happy": "高兴",
+    "sad": "悲伤",
+    "angry": "愤怒",
+    "fearful": "恐惧",
+    "surprised": "惊讶",
+    "disgusted": "厌恶"
+}
 
 
 class VoiceEngine:
@@ -63,6 +94,30 @@ class VoiceEngine:
                 self.device = "cpu"
         except Exception:
             self.device = "cpu"
+
+    def _load_wav_as_tensor(self, path: Path):
+        """Load WAV audio reliably without external codec dependencies."""
+        import torch
+        sr, data = wav_io.read(str(path))
+        if data.dtype == np.int16:
+            tensor_data = data.astype(np.float32) / 32768.0
+        elif data.dtype == np.int32:
+            tensor_data = data.astype(np.float32) / 2147483648.0
+        else:
+            tensor_data = data.astype(np.float32)
+        if tensor_data.ndim > 1:
+            tensor_data = tensor_data.mean(axis=-1)
+
+        # Resample to 44.1kHz if needed
+        if sr != 44100:
+            gcd = math.gcd(sr, 44100)
+            up = 44100 // gcd
+            down = sr // gcd
+            tensor_data = signal.resample_poly(tensor_data, up, down).astype(np.float32)
+            sr = 44100
+
+        wav_tensor = torch.from_numpy(tensor_data).unsqueeze(0).float()
+        return wav_tensor, sr
 
     def try_load_neural_model(self) -> bool:
         """Attempt to load Ming-3.0 MoE model if all 30 weights exist."""
@@ -135,40 +190,86 @@ class VoiceEngine:
         filename = f"ming_{audio_id}.wav"
         output_file_path = OUTPUTS_DIR / filename
 
+        target_language = LANGUAGE_NAME_MAP.get(language.lower(), "Korean")
+
         # 1. Try real neural MoE inference if model weights are present
         if self.try_load_neural_model() and self.model is not None and self.tokenizer is not None:
             try:
                 import torch
-                print(f"[VoiceEngine] Running Ming-3.0 MoE Neural Inference: '{text[:40]}'...")
+                print(f"[VoiceEngine] Running Ming-3.0 MoE Neural Inference: '{text[:40]}' (Lang: {target_language})...")
                 
-                # Check for Zero-Shot reference voice cloning
+                # Check for Zero-Shot reference voice cloning or Automatic Voice Design anchor
                 prompt_wav = None
                 prompt_text = None
+                prompt_wav_path = None
+
                 if reference_audio_id:
                     ref_path = REFERENCES_DIR / reference_audio_id
                     if ref_path.exists():
-                        import torchaudio
-                        wav_data, sr = torchaudio.load(str(ref_path))
-                        if sr != 44100:
-                            resampler = torchaudio.transforms.Resample(sr, 44100)
-                            wav_data = resampler(wav_data)
-                        if wav_data.shape[0] > 1:
-                            wav_data = wav_data.mean(dim=0, keepdim=True)
-                        prompt_wav = wav_data
-                        prompt_text = voice_design_prompt.strip() or "reference speaker"
+                        prompt_wav_path = ref_path
+                        prompt_text = voice_design_prompt.strip() or "reference speaker voice"
+
+                design_lower = voice_design_prompt.lower()
+                is_male = any(k in design_lower for k in ["남성", "남자", "male", "man", "중후", "내레이터", "다큐멘터리", "아저씨", "할아버지"])
+
+                if prompt_wav_path is None or not prompt_wav_path.exists():
+                    # Voice Design mode: Select acoustic anchor matching desired persona
+                    if is_male:
+                        prompt_wav_path = REFERENCES_DIR / "db30.wav"
+                        prompt_text = "感谢你的认可。"
+                    else:
+                        prompt_wav_path = REFERENCES_DIR / "lingguang.wav"
+                        prompt_text = "诶，你今天有空吗？我们能不能聊聊这件事啊？"
+
+                if prompt_wav_path and prompt_wav_path.exists():
+                    prompt_wav, _ = self._load_wav_as_tensor(prompt_wav_path)
+
+                # Format structured instruction
+                speed_str = "中速"
+                if speed < 0.85:
+                    speed_str = "慢速"
+                elif speed > 1.15:
+                    speed_str = "快速"
+
+                pitch_str = "中"
+                if pitch < -2:
+                    pitch_str = "低"
+                elif pitch > 2:
+                    pitch_str = "高"
+
+                emotion_zh = EMOTION_MAP.get(emotion.lower(), "中性")
+                style_desc = voice_design_prompt.strip() or ("30대 여성 아나운서" if not is_male else "40대 남성 내레이터")
+
+                instruction = json.dumps({
+                    "audio_sequence": [{
+                        "序号": 1,
+                        "说话人": "speaker_1",
+                        "方言": None,
+                        "情感": emotion_zh,
+                        "风格": style_desc,
+                        "语速": speed_str,
+                        "基频": pitch_str,
+                        "音量": "中",
+                        "BGM": {k: None for k in ["Genre", "Mood", "Instrument", "Theme", "ENV", "SNR"]},
+                        "IP": None
+                    }]
+                }, ensure_ascii=False)
 
                 # Calculate decode steps based on character length (12.5 steps/sec speech)
                 char_len = max(5, len(text))
-                max_steps = min(300, max(35, int(char_len * 2.5 / max(0.5, speed))))
+                max_steps = min(300, max(35, int(char_len * 2.8 / max(0.5, speed))))
                 flow_steps = 4  # 4 Euler steps for optimal speed & high fidelity
 
-                print(f"[VoiceEngine] Starting MoE generate (max_steps={max_steps}, flow_steps={flow_steps})...")
+                print(f"[VoiceEngine] Starting MoE generate (max_steps={max_steps}, flow_steps={flow_steps}, persona={'Male' if is_male else 'Female'})...")
                 output = self.model.generate_speech(
                     tokenizer=self.tokenizer,
                     target_text=text,
                     speaker_embedding=None,
+                    instruction=instruction,
                     prompt_waveform=prompt_wav,
                     prompt_text=prompt_text,
+                    target_language=target_language,
+                    include_target_language=True,
                     flow_steps=flow_steps,
                     max_decode_steps=max_steps,
                     stop_threshold=0.35,

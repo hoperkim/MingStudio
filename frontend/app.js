@@ -97,9 +97,11 @@ function initWaveSurfer() {
       barWidth: 3,
       barGap: 2,
       barRadius: 3,
-      height: 90,
-      responsive: true,
+      height: 96,
       normalize: true,
+      minPxPerSec: 50,
+      autoCenter: true,
+      dragToSeek: true,
     });
 
     wavesurfer.on('play', () => {
@@ -451,8 +453,12 @@ async function generateSpeech() {
 
     // Load generated audio directly into WaveSurfer
     if (wavesurfer) {
+      if (dom.waveformPlaceholder) {
+        dom.waveformPlaceholder.style.display = 'none';
+      }
       wavesurfer.load(data.audio_url);
       wavesurfer.once('ready', () => {
+        wavesurfer.seekTo(0);
         wavesurfer.play();
       });
     }
@@ -567,8 +573,12 @@ async function loadHistory() {
 
 window.playHistoryItem = function (url) {
   if (wavesurfer) {
+    if (dom.waveformPlaceholder) {
+      dom.waveformPlaceholder.style.display = 'none';
+    }
     wavesurfer.load(url);
     wavesurfer.once('ready', () => {
+      wavesurfer.seekTo(0);
       wavesurfer.play();
     });
     dom.btnDownloadWav.href = url;
