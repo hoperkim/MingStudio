@@ -13,6 +13,7 @@ import subprocess
 import threading
 import argparse
 import webbrowser
+import uuid
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
