@@ -89,16 +89,11 @@ python backend/server.py --launch-browser
 
 ---
 
-## 🌐 깃 저장소 배포 (GitHub Release)
+## 🌐 깃 저장소 배포 (GitHub Push)
 
-원격 저장소에 깔끔하게 배포할 수 있도록 준비되어 있습니다:
+기존의 무거운 구버전 커밋 및 의존성을 배제하고 클린 아키텍처로 원격 저장소를 갱신합니다:
 ```bash
-git init
-git add .
-git commit -m "feat: Initial commit for MingStudio clean architecture"
-git remote add origin https://github.com/hoperkim/MingStudio.git
-git branch -M main
-git push -u origin main
+git push -u origin main --force
 ```
 
 ---
