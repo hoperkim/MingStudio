@@ -66,17 +66,41 @@ MingStudio/
 
 ## 🚀 빠른 시작 (Quick Start)
 
-### 실행 방법
-`Start.bat`을 더블 클릭하면 자동으로 환경을 감지하고 스튜디오 창이 실행됩니다:
+### 1. 저장소 복제 (Clone)
+```bash
+git clone https://github.com/hoperkim/MingStudio.git
+cd MingStudio
+```
+
+### 2. 패키지 의존성 설치 (Install Dependencies)
+```bash
+# 가상환경 사용 권장 (선택사항)
+python -m venv venv
+venv\Scripts\activate
+
+# 핵심 패키지 설치
+pip install -r requirements.txt
+```
+> [!NOTE]
+> PyTorch CUDA(GPU) 환경이 아직 구성되지 않은 경우:
+> ```bash
+> pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
+> ```
+
+### 3. 스튜디오 실행 (Launch Studio)
+가장 간편하게 `Start.bat`을 더블 클릭하면 파이썬 엔진을 자동 감지하고 마이크로소프트 엣지 앱(App) 모드로 스튜디오가 실행됩니다:
 ```bash
 Start.bat
 ```
-
 또는 터미널에서 직접 실행:
 ```bash
-# Python으로 직접 실행 시
 python backend/server.py --launch-browser
 ```
+
+### 4. 모델 다운로드 (최초 1회)
+* 최초 실행 시 모델 가중치가 없으면 **원클릭 인앱 다운로더 마법사**가 팝업됩니다.
+* **[원클릭 모델 다운로드]** 버튼을 누르면 8스레드 고속 병렬 스트리밍으로 가중치(30개 safetensors)가 다운로드됩니다.
+* 가중치가 이미 존재하는 경우 **0.1초 만에 마법사를 자동 스킵(Auto-Skip)**하여 즉시 메인 스튜디오로 진입합니다.
 
 ---
 
