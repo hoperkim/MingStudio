@@ -36,6 +36,8 @@ data/outputs/*
 !data/outputs/.gitkeep
 data/references/*
 !data/references/.gitkeep
+!data/references/lingguang.wav
+!data/references/db30.wav
 data/.triton_cache/
 .triton/
 backend/official_ref/
